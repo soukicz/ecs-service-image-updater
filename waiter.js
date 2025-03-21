@@ -1,14 +1,10 @@
 'use strict'
 
-const AWS = require('aws-sdk');
+const { ECS } = require('@aws-sdk/client-ecs');
 const _ = require('lodash');
 
 // Set the default region to 'us-east-1' if not already set
-if (!AWS.config.region) {
-    AWS.config.update({
-        region: process.env.AWS_DEFAULT_REGION || 'us-east-1'
-    });
-}
+const region = process.env.AWS_DEFAULT_REGION || 'us-east-1';
 
 /**
  *
@@ -28,22 +24,24 @@ function waiter(options, cb) {
      * @param {object} options A hash of options used when initiating this deployment
      * @param {function} cb Callback
      */
-    function getServiceTaskDeployments(options, cb) {
-        const ecs = new AWS.ECS();
+    async function getServiceTaskDeployments(options, cb) {
+        const ecs = new ECS({ region: region });
 
         const params = {
             cluster: options.clusterArn,
             services: [options.serviceName]
         };
 
-        ecs.describeServices(params, (err, data) => {
-            if (err) return cb(err);
-
-            var service = _.find(data.services, (s) => s.serviceName === options.serviceName);
+        try {
+            const data = await ecs.describeServices(params);
+            
+            const service = _.find(data.services, (s) => s.serviceName === options.serviceName);
             if (!service) return cb(new Error(`Could not find service "${options.serviceName}"`));
 
             cb(null, service.deployments);
-        });
+        } catch (err) {
+            cb(err);
+        }
     }
 
     function periodicCheck() {
@@ -82,7 +80,6 @@ function waiter(options, cb) {
     }
 
     setTimeout(periodicCheck, 2 * 1000);
-
 }
 
 module.exports = waiter;
