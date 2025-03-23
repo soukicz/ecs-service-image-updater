@@ -158,6 +158,7 @@ Object.assign(updater, {
       'volumes',
       'requiresCompatibilities',
       'runtimePlatform',
+      'ephemeralStorage',
       'cpu',
       'memory'
     ]);
